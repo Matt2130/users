@@ -1,4 +1,4 @@
-import amqp from 'amqplib';
+/* import amqp from 'amqplib';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -29,4 +29,33 @@ export async function userCreatedEvent(user) {
     setTimeout(() => {
         connection.close();
     }, 500)
-}
+} */
+
+    import amqp from 'amqplib';
+    import dotenv from 'dotenv';
+    
+    dotenv.config();
+    
+    const RABBITMQ_URL = process.env.RABBITMQ_URL;
+    const RABBIT_EXCHANGE = "user_event";
+    const RABBIT_ROUTING_KEY = "user.created";
+    
+    export async function userCreatedEvent(user) {
+        try {
+            const connection = await amqp.connect(RABBITMQ_URL);
+            const channel = await connection.createChannel();
+            
+            await channel.assertExchange(RABBIT_EXCHANGE, "topic", { durable: true });
+    
+            const message = JSON.stringify(user);
+            channel.publish(RABBIT_EXCHANGE, RABBIT_ROUTING_KEY, Buffer.from(message));
+    
+            console.log(`Mensaje enviado -> Exchange: "${RABBIT_EXCHANGE}", Routing Key: "${RABBIT_ROUTING_KEY}", Mensaje: ${message}`);
+    
+            setTimeout(() => {
+                connection.close();
+            }, 500);
+        } catch (error) {
+            console.error("Error al publicar en RabbitMQ:", error);
+        }
+    }    
